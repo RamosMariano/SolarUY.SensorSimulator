@@ -5,6 +5,8 @@ services:
     container_name: solaruy-sensor-simulator
     ports:
       - "127.0.0.1:5100:8080"
+    networks:
+      - app-frontend
     environment:
       # Cada ":" de appsettings.json se escribe "__" en una variable de entorno.
       # Cualquier valor de la sección "Simulador" se puede cambiar acá sin recompilar.
@@ -20,4 +22,8 @@ services:
       # Simulador__Nodos__1__Id: "ARM-002"
       # Simulador__Nodos__1__Paneles: "4"
       # Simulador__Nodos__1__PotenciaNominalW: "450"
+    
     restart: unless-stopped
+  networks:
+  app-frontend:
+    external: true

@@ -1,0 +1,25 @@
+services:
+  sensor-simulator:
+    build: .
+    image: solaruy-sensor-simulator:latest
+    container_name: solaruy-sensor-simulator
+    ports:
+      # puerto de tu máquina : puerto del contenedor
+      # Con "5100" las URLs de Postman y requests.http siguen funcionando igual.
+      - "5100:8080"
+    environment:
+      # Cada ":" de appsettings.json se escribe "__" en una variable de entorno.
+      # Cualquier valor de la sección "Simulador" se puede cambiar acá sin recompilar.
+      Simulador__NodosIniciales: "3"
+      Simulador__PanelesPorNodo: "5"
+      Simulador__PotenciaNominalPanelW: "300"
+      Simulador__ProbabilidadFalla: "0.01"
+      Simulador__DuracionFallaSegundos: "120"
+      Simulador__ZonaHoraria: "America/Montevideo"
+      # Topología no uniforme (reemplaza a NodosIniciales y PanelesPorNodo):
+      # Simulador__Nodos__0__Id: "ARM-001"
+      # Simulador__Nodos__0__Paneles: "6"
+      # Simulador__Nodos__1__Id: "ARM-002"
+      # Simulador__Nodos__1__Paneles: "4"
+      # Simulador__Nodos__1__PotenciaNominalW: "450"
+    restart: unless-stopped

@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+**/.vs/
+**/TestResults/
+.git/
+.gitignore
+docs/
+postman/
+tests/
+requests.http
+README.md
+Dockerfile
+docker-compose.yml
+.dockerignore

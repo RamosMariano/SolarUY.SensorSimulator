@@ -24,6 +24,6 @@ services:
       # Simulador__Nodos__1__PotenciaNominalW: "450"
     
     restart: unless-stopped
-  networks:
+networks:
   app-frontend:
     external: true

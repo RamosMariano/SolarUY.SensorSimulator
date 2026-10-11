@@ -4,9 +4,7 @@ services:
     image: solaruy-sensor-simulator:latest
     container_name: solaruy-sensor-simulator
     ports:
-      # puerto de tu máquina : puerto del contenedor
-      # Con "5100" las URLs de Postman y requests.http siguen funcionando igual.
-      - "5100:8080"
+      - "127.0.0.1:5100:8080"
     environment:
       # Cada ":" de appsettings.json se escribe "__" en una variable de entorno.
       # Cualquier valor de la sección "Simulador" se puede cambiar acá sin recompilar.

@@ -1,0 +1,45 @@
+### Pruebas manuales con la extensión "REST Client" de VS Code (humao.rest-client).
+
+@host = http://localhost:5100
+
+### Estado de un sensor (lo que consulta el sistema de gestión)
+GET {{host}}/sensores/ARM-001/estado
+
+### Desactivar un panel
+POST {{host}}/sensores/ARM-001/paneles/P01/desactivar
+
+### Reactivar un panel
+POST {{host}}/sensores/ARM-001/paneles/P01/activar
+
+### Cortar el volcado a la red
+POST {{host}}/sensores/ARM-001/volcado/desactivar
+
+### Reactivar el volcado a la red
+POST {{host}}/sensores/ARM-001/volcado/activar
+
+### ---- API de control del simulador (solo existe en el mock) ----
+
+### Inventario: sensores y paneles simulados
+GET {{host}}/simulador/inventario
+
+### Agregar un nodo en caliente con 6 paneles de 400 W
+POST {{host}}/simulador/sensores
+Content-Type: application/json
+
+{
+  "identificadorHardwareARM": "ARM-004",
+  "cantidadPaneles": 6,
+  "potenciaNominalW": 400
+}
+
+### Quitar un sensor (el sistema lo verá no responder)
+DELETE {{host}}/simulador/sensores/ARM-004
+
+### Forzar sobretemperatura en un panel (para mostrar FALLA_DETECTADA en la defensa)
+POST {{host}}/simulador/fallas/ARM-001/P02?tipo=sobretemperatura
+
+### Forzar caída de potencia
+POST {{host}}/simulador/fallas/ARM-001/P03?tipo=caidaPotencia
+
+### Restablecer un panel
+DELETE {{host}}/simulador/fallas/ARM-001/P02

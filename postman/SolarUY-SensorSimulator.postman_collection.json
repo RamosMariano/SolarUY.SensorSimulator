@@ -1,0 +1,774 @@
+{
+  "info": {
+    "name": "SolarUY - Simulador de Sensor",
+    "description": "Peticiones para la API del simulador de sensor ARM + inversor (SolarUY.SensorSimulator). Sin autenticación. Levantar con: dotnet run --project src/SolarUY.SensorSimulator (escucha en http://localhost:5100). Cambiá las variables hw y codigo de la colección para probar otros sensores o paneles.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Sensor (contrato que consume el sistema)",
+      "item": [
+        {
+          "name": "Estado del sensor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/{{hw}}/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "{{hw}}",
+                "estado"
+              ]
+            },
+            "description": "Lecturas de todos los paneles del nodo (lo que consulta el sistema de gestión)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Tiene los campos del contrato\", () => {",
+                  "  pm.expect(j).to.have.property(\"identificadorHardwareARM\");",
+                  "  pm.expect(j).to.have.property(\"fechaHoraUtc\");",
+                  "  pm.expect(j).to.have.property(\"volcadoRedActivo\");",
+                  "  pm.expect(j).to.have.property(\"eficienciaConversion\");",
+                  "  pm.expect(j.paneles).to.be.an(\"array\").that.is.not.empty;",
+                  "});",
+                  "pm.test(\"Cada panel trae sus mediciones\", () => {",
+                  "  j.paneles.forEach(p => {",
+                  "    pm.expect(p).to.have.all.keys(\"codigoPanel\",\"activo\",\"corrienteContinua\",\"voltaje\",\"potenciaGeneradaWatts\",\"temperaturaCelsius\");",
+                  "  });",
+                  "});",
+                  "pm.test(\"No incluye estadoDetectado (lo calcula el sistema)\", () => {",
+                  "  j.paneles.forEach(p => pm.expect(p).to.not.have.property(\"estadoDetectado\"));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desactivar panel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/{{hw}}/paneles/{{codigo}}/desactivar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "{{hw}}",
+                "paneles",
+                "{{codigo}}",
+                "desactivar"
+              ]
+            },
+            "description": "Panel inactivo: lecturas en cero. 409 si ya estaba desactivado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().paneles.find(x => x.codigoPanel === pm.collectionVariables.get(\"codigo\"));",
+                  "pm.test(\"El panel quedó inactivo y sin potencia\", () => {",
+                  "  pm.expect(p.activo).to.eql(false);",
+                  "  pm.expect(p.potenciaGeneradaWatts).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activar panel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/{{hw}}/paneles/{{codigo}}/activar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "{{hw}}",
+                "paneles",
+                "{{codigo}}",
+                "activar"
+              ]
+            },
+            "description": "Reactiva el panel. 409 si ya estaba activo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const p = pm.response.json().paneles.find(x => x.codigoPanel === pm.collectionVariables.get(\"codigo\"));",
+                  "pm.test(\"El panel quedó activo\", () => pm.expect(p.activo).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Desactivar volcado a la red",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/{{hw}}/volcado/desactivar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "{{hw}}",
+                "volcado",
+                "desactivar"
+              ]
+            },
+            "description": "409 si el volcado ya estaba desactivado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"volcadoRedActivo = false\", () => pm.expect(pm.response.json().volcadoRedActivo).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activar volcado a la red",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/{{hw}}/volcado/activar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "{{hw}}",
+                "volcado",
+                "activar"
+              ]
+            },
+            "description": "409 si el volcado ya estaba activo."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"volcadoRedActivo = true\", () => pm.expect(pm.response.json().volcadoRedActivo).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Control del simulador (solo mock)",
+      "item": [
+        {
+          "name": "Inventario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/inventario",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "inventario"
+              ]
+            },
+            "description": "Sensores y paneles simulados. Copiá de acá los códigos al dar de alta en el CRUD del sistema."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Es una lista de sensores con paneles\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j).to.be.an(\"array\").that.is.not.empty;",
+                  "  pm.expect(j[0]).to.have.property(\"identificadorHardwareARM\");",
+                  "  pm.expect(j[0].paneles[0]).to.have.property(\"codigoPanel\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agregar sensor (nodo) en caliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/sensores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "sensores"
+              ]
+            },
+            "description": "Crea un nodo con N paneles. potenciaNominalW es opcional. 201 creado, 400 datos inválidos, 409 repetido.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificadorHardwareARM\": \"ARM-004\",\n  \"cantidadPaneles\": 6,\n  \"potenciaNominalW\": 400\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Devuelve el inventario del nuevo sensor\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.identificadorHardwareARM).to.eql(\"ARM-004\");",
+                  "  pm.expect(j.paneles).to.have.lengthOf(6);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quitar sensor",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/sensores/ARM-004",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "sensores",
+                "ARM-004"
+              ]
+            },
+            "description": "Quita el sensor (el sistema lo verá no responder). 204 ok, 404 si no existe."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forzar sobretemperatura",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/fallas/{{hw}}/{{codigo}}?tipo=sobretemperatura",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "fallas",
+                "{{hw}}",
+                "{{codigo}}"
+              ],
+              "query": [
+                {
+                  "key": "tipo",
+                  "value": "sobretemperatura"
+                }
+              ]
+            },
+            "description": "Falla forzada: la temperatura del panel supera los 75 °C hasta que se restablezca. Útil para mostrar FALLA_DETECTADA."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Falla forzada de sobretemperatura\", () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.falla).to.eql(\"sobretemperatura\");",
+                  "  pm.expect(j.fallaForzada).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forzar caída de potencia",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/fallas/{{hw}}/{{codigo}}?tipo=caidaPotencia",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "fallas",
+                "{{hw}}",
+                "{{codigo}}"
+              ],
+              "query": [
+                {
+                  "key": "tipo",
+                  "value": "caidaPotencia"
+                }
+              ]
+            },
+            "description": "Falla forzada: la potencia del panel baja a la mitad hasta que se restablezca."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Falla forzada de caída de potencia\", () => pm.expect(pm.response.json().falla).to.eql(\"caidaPotencia\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer panel (quitar falla)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/fallas/{{hw}}/{{codigo}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "fallas",
+                "{{hw}}",
+                "{{codigo}}"
+              ]
+            },
+            "description": "Quita la falla del panel. Idempotente: también responde 204 si no tenía falla."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Casos de error",
+      "item": [
+        {
+          "name": "Sensor inexistente → 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/ARM-999/estado",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "ARM-999",
+                "estado"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Panel inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/{{hw}}/paneles/P99/desactivar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "{{hw}}",
+                "paneles",
+                "P99",
+                "desactivar"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Activar panel ya activo → 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/{{hw}}/paneles/P05/activar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "{{hw}}",
+                "paneles",
+                "P05",
+                "activar"
+              ]
+            },
+            "description": "Falla con 409 si P05 ya está activo (estado por defecto)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Volcado ya activo → 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sensores/{{hw}}/volcado/activar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sensores",
+                "{{hw}}",
+                "volcado",
+                "activar"
+              ]
+            },
+            "description": "Falla con 409 si el volcado ya está activo (estado por defecto)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alta con sensor repetido → 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/sensores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "sensores"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificadorHardwareARM\": \"ARM-001\",\n  \"cantidadPaneles\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alta con datos inválidos → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/sensores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "sensores"
+              ]
+            },
+            "description": "Cantidad de paneles fuera de 1–200.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificadorHardwareARM\": \"ARM-200\",\n  \"cantidadPaneles\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alta con identificador inválido → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/sensores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "sensores"
+              ]
+            },
+            "description": "El identificador solo admite letras, números, '-' y '_'.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identificadorHardwareARM\": \"ARM 200\",\n  \"cantidadPaneles\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forzar falla con tipo inválido → 400",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/fallas/{{hw}}/{{codigo}}?tipo=explosion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "fallas",
+                "{{hw}}",
+                "{{codigo}}"
+              ],
+              "query": [
+                {
+                  "key": "tipo",
+                  "value": "explosion"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forzar falla en panel inexistente → 404",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/simulador/fallas/{{hw}}/P99?tipo=sobretemperatura",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "simulador",
+                "fallas",
+                "{{hw}}",
+                "P99"
+              ],
+              "query": [
+                {
+                  "key": "tipo",
+                  "value": "sobretemperatura"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5100",
+      "type": "string"
+    },
+    {
+      "key": "hw",
+      "value": "ARM-001",
+      "type": "string"
+    },
+    {
+      "key": "codigo",
+      "value": "P01",
+      "type": "string"
+    }
+  ]
+}

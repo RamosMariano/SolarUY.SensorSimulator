@@ -79,12 +79,12 @@ No forma parte del contrato real. Sirve para demos y defensa.
 | `GET /simulador/inventario` | Lista sensores y paneles simulados (para copiar los códigos al dar de alta en el CRUD) | 200 |
 | `POST /simulador/sensores` con `{ "identificadorHardwareARM": "ARM-004", "cantidadPaneles": 6, "potenciaNominalW": 300 }` | Agrega un nodo con X paneles en caliente. `potenciaNominalW` es opcional (por defecto, la configurada) | 201, 400, 409 |
 | `DELETE /simulador/sensores/{hw}` | Quita un sensor simulado (el sistema lo verá no responder) | 204, 404 |
-| `POST /simulador/fallas/{hw}/{codigo}?tipo=sobretemperatura\|caidaPotencia` | Fuerza una falla en un panel; dura hasta que se la restablece | 200, 400 (tipo ausente o inválido), 404 |
+| `POST /simulador/fallas/{hw}/{codigo}?tipo=sobretemperatura\|caidaPotencia[&porcentaje=N]` | Fuerza una falla en un panel; dura hasta que se la restablece. `porcentaje` es opcional, solo vale con `caidaPotencia` y debe estar entre 1 y 99; sin él la potencia baja a la mitad (50) | 200, 400 (tipo ausente o inválido, porcentaje inválido o con otro tipo), 404 |
 | `DELETE /simulador/fallas/{hw}/{codigo}` | Restablece el panel (idempotente: si no tenía falla, también responde 204) | 204, 404 |
 
 **Validación del alta:** `identificadorHardwareARM` obligatorio, hasta 50 caracteres, solo letras, números, `-` y `_` (viaja en la URL); `cantidadPaneles` entre 1 y 200; `potenciaNominalW`, si se envía, mayor que 0. Un identificador repetido responde `409`.
 
-**Inventario** (forma de la respuesta): por sensor, `identificadorHardwareARM`, `volcadoRedActivo` y `paneles[]` con `codigoPanel`, `potenciaNominalW`, `activo`, `falla` (`"sobretemperatura"`, `"caidaPotencia"` o `null`) y `fallaForzada`.
+**Inventario** (forma de la respuesta): por sensor, `identificadorHardwareARM`, `volcadoRedActivo` y `paneles[]` con `codigoPanel`, `potenciaNominalW`, `activo`, `falla` (`"sobretemperatura"`, `"caidaPotencia"` o `null`), `fallaForzada` y `porcentajeCaida` (cuánto baja la potencia si la falla es `caidaPotencia`: el valor pedido o 50; `null` en cualquier otro caso).
 
 ## 5. Vinculación entre el sistema y el simulador
 
@@ -131,7 +131,7 @@ El sistema es la fuente de verdad de parques, nodos y paneles (CRUD). El simulad
 - `voltaje`: entre 30 y 32 V, también de noche (simplificación; un panel real caería a casi 0 V sin luz). `corriente = potencia / voltaje`.
 - `temperatura = 20 + 30 · factorSolar + ruido (±1,5 °C)`, correlacionada con la potencia.
 - **Panel desactivado:** `activo=false`, corriente, voltaje y potencia en cero; temperatura ambiente (20 °C ± 1). No entra en fallas aleatorias.
-- **Falla aleatoria:** al responder, cada panel sano y activo tiene `ProbabilidadFalla` de entrar en falla. Dura `DuracionFallaSegundos` y se recupera sola. Tipos: `sobretemperatura` (temperatura siempre por encima de 80 °C, incluso de noche, para que sea demostrable a cualquier hora) o `caidaPotencia` (potencia reducida a la mitad).
+- **Falla aleatoria:** al responder, cada panel sano y activo tiene `ProbabilidadFalla` de entrar en falla. Dura `DuracionFallaSegundos` y se recupera sola. Tipos: `sobretemperatura` (temperatura siempre por encima de 80 °C, incluso de noche, para que sea demostrable a cualquier hora) o `caidaPotencia` (potencia reducida a la mitad; en una falla forzada se puede elegir otro porcentaje con `porcentaje=N`).
 - **Falla forzada:** por la API de control (sección 4). Persiste hasta que se la restablece.
 - El estado vive en memoria (fallas, paneles activos, volcado). Al reiniciar el simulador vuelve a la configuración inicial.
 

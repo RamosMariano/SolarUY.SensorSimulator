@@ -91,6 +91,32 @@ public class SensorSimuladoTests
     }
 
     [Fact]
+    public void Forzar_una_caida_con_porcentaje_se_refleja_en_el_inventario()
+    {
+        var sensor = CrearSensor();
+
+        Assert.Equal(ResultadoOrden.Ok, sensor.ForzarFalla("P02", TipoFalla.CaidaPotencia, 28));
+
+        var panel = sensor.Inventario().Paneles.First(p => p.CodigoPanel == "P02");
+        Assert.Equal("caidaPotencia", panel.Falla);
+        Assert.Equal(28.0, panel.PorcentajeCaida);
+    }
+
+    [Fact]
+    public void Forzar_una_caida_sin_porcentaje_informa_50_y_la_sobretemperatura_no_informa_nada()
+    {
+        var sensor = CrearSensor();
+
+        sensor.ForzarFalla("P01", TipoFalla.CaidaPotencia);
+        sensor.ForzarFalla("P02", TipoFalla.Sobretemperatura, 28); // el porcentaje se ignora
+
+        var paneles = sensor.Inventario().Paneles;
+        Assert.Equal(50.0, paneles.First(p => p.CodigoPanel == "P01").PorcentajeCaida);
+        Assert.Null(paneles.First(p => p.CodigoPanel == "P02").PorcentajeCaida);
+        Assert.Null(paneles.First(p => p.CodigoPanel == "P03").PorcentajeCaida);
+    }
+
+    [Fact]
     public void Forzar_o_restablecer_falla_en_un_panel_inexistente_se_informa()
     {
         var sensor = CrearSensor();

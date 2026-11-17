@@ -104,8 +104,11 @@ public sealed class SensorSimulado
         }
     }
 
-    /// <summary>Fuerza una falla que dura hasta que se la restablece (útil para demos y defensa).</summary>
-    public ResultadoOrden ForzarFalla(string codigoPanel, TipoFalla tipo)
+    /// <summary>
+    /// Fuerza una falla que dura hasta que se la restablece (útil para demos y defensa).
+    /// <paramref name="porcentajeCaida"/> solo se usa con CaidaPotencia; si es nulo la potencia baja a la mitad.
+    /// </summary>
+    public ResultadoOrden ForzarFalla(string codigoPanel, TipoFalla tipo, double? porcentajeCaida = null)
     {
         lock (_lock)
         {
@@ -115,7 +118,8 @@ public sealed class SensorSimulado
                 return ResultadoOrden.PanelInexistente;
             }
 
-            panel.Falla = new FallaActiva(tipo, null);
+            panel.Falla = new FallaActiva(tipo, null,
+                tipo == TipoFalla.CaidaPotencia ? porcentajeCaida : null);
             return ResultadoOrden.Ok;
         }
     }
@@ -146,7 +150,8 @@ public sealed class SensorSimulado
                     p.PotenciaNominalW,
                     p.Activo,
                     p.Falla?.Tipo.ANombreApi(),
-                    p.Falla?.EsForzada ?? false))
+                    p.Falla?.EsForzada ?? false,
+                    p.Falla?.PorcentajeCaidaInformado))
                 .ToList();
 
             return new InventarioSensorDto(IdentificadorHardwareARM, _volcadoRedActivo, paneles);

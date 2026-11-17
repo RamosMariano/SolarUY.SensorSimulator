@@ -61,7 +61,7 @@ Es un mock para pruebas: **no tiene autenticación** (no hay API key). No lo exp
 | `GET /simulador/inventario` | Sensores y paneles simulados (copiá de acá los códigos al dar de alta en el CRUD) |
 | `POST /simulador/sensores` `{ "identificadorHardwareARM", "cantidadPaneles", "potenciaNominalW" }` | Agrega un nodo en caliente (201, 400, 409) |
 | `DELETE /simulador/sensores/{hw}` | Quita un sensor (204, 404) |
-| `POST /simulador/fallas/{hw}/{codigo}?tipo=sobretemperatura\|caidaPotencia` | Fuerza una falla hasta que se la restablece |
+| `POST /simulador/fallas/{hw}/{codigo}?tipo=sobretemperatura\|caidaPotencia[&porcentaje=N]` | Fuerza una falla hasta que se la restablece. `porcentaje` (1 a 99, solo con `caidaPotencia`) fija cuánto baja la potencia; sin él baja a la mitad |
 | `DELETE /simulador/fallas/{hw}/{codigo}` | Restablece el panel |
 
 ## Cuántos nodos y paneles

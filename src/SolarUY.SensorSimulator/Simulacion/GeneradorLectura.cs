@@ -69,14 +69,15 @@ public sealed class GeneradorLectura
         var voltaje = 30 + _random.NextDouble() * 2;                          // 30–32 V
         var temperatura = TemperaturaAmbienteC + 30 * factor + Ruido(1.5);    // correlacionada con la potencia
 
-        switch (panel.Falla?.Tipo)
+        switch (panel.Falla)
         {
-            case TipoFalla.Sobretemperatura:
+            case { Tipo: TipoFalla.Sobretemperatura }:
                 // Siempre por encima de 75 °C, aun de noche, para que la falla forzada sea demostrable.
                 temperatura = Math.Max(temperatura, 80) + _random.NextDouble() * 5;
                 break;
-            case TipoFalla.CaidaPotencia:
-                potencia *= 0.5;
+            case { Tipo: TipoFalla.CaidaPotencia } caida:
+                // Sin porcentaje explícito baja a la mitad, como siempre.
+                potencia *= 1 - caida.PorcentajeCaidaEfectivo / 100;
                 break;
         }
 

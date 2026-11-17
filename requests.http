@@ -38,8 +38,14 @@ DELETE {{host}}/simulador/sensores/ARM-004
 ### Forzar sobretemperatura en un panel (para mostrar FALLA_DETECTADA en la defensa)
 POST {{host}}/simulador/fallas/ARM-001/P02?tipo=sobretemperatura
 
-### Forzar caída de potencia
+### Forzar caída de potencia (sin porcentaje: la potencia baja a la mitad)
 POST {{host}}/simulador/fallas/ARM-001/P03?tipo=caidaPotencia
+
+### Forzar una caída del 28 % (el sistema la diagnostica como RENDIMIENTO_BAJO: entre 15 % y 40 %)
+POST {{host}}/simulador/fallas/ARM-001/P03?tipo=caidaPotencia&porcentaje=28
+
+### Forzar una caída del 60 % (el sistema la diagnostica como FALLA_DETECTADA: más de 40 %)
+POST {{host}}/simulador/fallas/ARM-001/P03?tipo=caidaPotencia&porcentaje=60
 
 ### Restablecer un panel
 DELETE {{host}}/simulador/fallas/ARM-001/P02

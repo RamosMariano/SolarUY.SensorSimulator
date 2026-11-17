@@ -26,7 +26,8 @@ public sealed record InventarioPanelDto(
     double PotenciaNominalW,
     bool Activo,
     string? Falla,
-    bool FallaForzada);
+    bool FallaForzada,
+    double? PorcentajeCaida = null);
 
 public sealed record InventarioSensorDto(
     string IdentificadorHardwareARM,

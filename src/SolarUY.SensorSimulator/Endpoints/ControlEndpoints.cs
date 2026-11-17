@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using SolarUY.SensorSimulator.Configuration;
@@ -13,6 +14,10 @@ namespace SolarUY.SensorSimulator.Endpoints;
 public static class ControlEndpoints
 {
     private const int MaxPanelesPorSensor = 200;
+
+    // Caída de potencia que se puede pedir: 0 % no sería una falla y 100 % es un panel apagado.
+    private const double PorcentajeCaidaMinimo = 1;
+    private const double PorcentajeCaidaMaximo = 99;
 
     // El identificador viaja en la URL, por eso se limita a letras, números, guion y guion bajo.
     private static readonly Regex IdentificadorValido = new("^[A-Za-z0-9_-]{1,50}$", RegexOptions.Compiled);
@@ -32,8 +37,8 @@ public static class ControlEndpoints
                 ? Results.NoContent()
                 : Results.NotFound(new ErrorDto($"El sensor '{hw}' no existe.")));
 
-        grupo.MapPost("/fallas/{hw}/{codigo}", (string hw, string codigo, string? tipo, SensorStore store) =>
-            ForzarFalla(hw, codigo, tipo, store));
+        grupo.MapPost("/fallas/{hw}/{codigo}", (string hw, string codigo, string? tipo, string? porcentaje, SensorStore store) =>
+            ForzarFalla(hw, codigo, tipo, porcentaje, store));
 
         grupo.MapDelete("/fallas/{hw}/{codigo}", (string hw, string codigo, SensorStore store) =>
             RestablecerFalla(hw, codigo, store));
@@ -80,7 +85,7 @@ public static class ControlEndpoints
         return Results.Created($"/sensores/{hw}/estado", sensor!.Inventario());
     }
 
-    private static IResult ForzarFalla(string hw, string codigo, string? tipo, SensorStore store)
+    private static IResult ForzarFalla(string hw, string codigo, string? tipo, string? porcentaje, SensorStore store)
     {
         if (!TipoFallaExtensions.TryParseApi(tipo, out var tipoFalla))
         {
@@ -90,12 +95,38 @@ public static class ControlEndpoints
             });
         }
 
+        // El porcentaje es opcional y solo aplica a la caída de potencia. Se recibe como texto para poder
+        // responder un 400 claro (y aceptar el punto decimal sin importar la cultura del servidor).
+        double? porcentajeCaida = null;
+        if (porcentaje is not null)
+        {
+            if (tipoFalla != TipoFalla.CaidaPotencia)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["porcentaje"] = new[] { "Solo se puede indicar con tipo=caidaPotencia." }
+                });
+            }
+
+            // IsFinite descarta "NaN" e "Infinity", que double.TryParse acepta pero no son porcentajes.
+            if (!double.TryParse(porcentaje, NumberStyles.Float, CultureInfo.InvariantCulture, out var valor)
+                || !double.IsFinite(valor) || valor < PorcentajeCaidaMinimo || valor > PorcentajeCaidaMaximo)
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["porcentaje"] = new[] { $"Debe ser un número entre {PorcentajeCaidaMinimo} y {PorcentajeCaidaMaximo}." }
+                });
+            }
+
+            porcentajeCaida = valor;
+        }
+
         if (!store.TryObtener(hw, out var sensor))
         {
             return Results.NotFound(new ErrorDto($"El sensor '{hw}' no existe."));
         }
 
-        if (sensor.ForzarFalla(codigo, tipoFalla) != ResultadoOrden.Ok)
+        if (sensor.ForzarFalla(codigo, tipoFalla, porcentajeCaida) != ResultadoOrden.Ok)
         {
             return Results.NotFound(new ErrorDto($"El panel '{codigo}' no existe en el sensor '{hw}'."));
         }

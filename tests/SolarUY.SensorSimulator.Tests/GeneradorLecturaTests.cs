@@ -147,6 +147,38 @@ public class GeneradorLecturaTests
         Assert.InRange(potencia, 142.5 - 0.01, 157.5 + 0.01); // 300 × 0,5 ± 5 %
     }
 
+    [Theory]
+    [InlineData(28)]
+    [InlineData(60)]
+    [InlineData(10)]
+    public void La_caida_de_potencia_con_porcentaje_reduce_la_potencia_en_ese_porcentaje(double porcentaje)
+    {
+        var panel = new PanelSimulado("P01", 300)
+        {
+            Falla = new FallaActiva(TipoFalla.CaidaPotencia, null, porcentaje)
+        };
+
+        var potencia = Crear().Generar(panel, Mediodia).PotenciaGeneradaWatts;
+
+        var esperada = 300 * (1 - porcentaje / 100);
+        Assert.InRange(potencia, esperada * 0.95 - 0.01, esperada * 1.05 + 0.01); // ± 5 % de ruido
+    }
+
+    [Fact]
+    public void La_caida_de_potencia_sin_porcentaje_equivale_a_50()
+    {
+        var falla = new FallaActiva(TipoFalla.CaidaPotencia, null);
+
+        Assert.Equal(50.0, falla.PorcentajeCaidaEfectivo);
+        Assert.Equal(50.0, falla.PorcentajeCaidaInformado);
+    }
+
+    [Fact]
+    public void La_sobretemperatura_no_informa_porcentaje_de_caida()
+    {
+        Assert.Null(new FallaActiva(TipoFalla.Sobretemperatura, null).PorcentajeCaidaInformado);
+    }
+
     // ---- Fallas aleatorias -------------------------------------------------------------------
 
     [Fact]

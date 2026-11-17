@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace SolarUY.SensorSimulator.Tests;
 
@@ -138,6 +139,76 @@ public class ControlApiTests
 
         var potencia = estado.Panel("P03").GetProperty("potenciaGeneradaWatts").GetDouble();
         Assert.InRange(potencia, 142.4, 157.6); // 300 W × 0,5 ± 5 %
+    }
+
+    [Theory]
+    [InlineData(28)]
+    [InlineData(60)]
+    public async Task Forzar_caida_de_potencia_con_porcentaje_reduce_la_potencia_en_ese_porcentaje(int porcentaje)
+    {
+        using var fabrica = new SimuladorFactory();
+        using var cliente = fabrica.CrearCliente();
+
+        var forzar = await cliente.PostAsync($"/simulador/fallas/ARM-001/P03?tipo=caidaPotencia&porcentaje={porcentaje}", null);
+        var estado = await (await cliente.GetAsync("/sensores/ARM-001/estado")).LeerJsonAsync();
+
+        Assert.Equal(HttpStatusCode.OK, forzar.StatusCode);
+        Assert.Equal((double)porcentaje, (await forzar.LeerJsonAsync()).GetProperty("porcentajeCaida").GetDouble());
+        var esperada = 300 * (1 - porcentaje / 100.0);
+        var potencia = estado.Panel("P03").GetProperty("potenciaGeneradaWatts").GetDouble();
+        Assert.InRange(potencia, esperada * 0.95 - 0.1, esperada * 1.05 + 0.1); // ± 5 % de ruido
+    }
+
+    [Fact]
+    public async Task El_inventario_informa_el_porcentaje_de_la_caida_forzada()
+    {
+        using var fabrica = new SimuladorFactory();
+        using var cliente = fabrica.CrearCliente();
+        await cliente.PostAsync("/simulador/fallas/ARM-001/P03?tipo=caidaPotencia&porcentaje=28.5", null);
+        await cliente.PostAsync("/simulador/fallas/ARM-001/P04?tipo=caidaPotencia", null);
+        await cliente.PostAsync("/simulador/fallas/ARM-001/P05?tipo=sobretemperatura", null);
+
+        var inventario = await (await cliente.GetAsync("/simulador/inventario")).LeerJsonAsync();
+
+        var paneles = inventario.EnumerateArray().First().GetProperty("paneles").EnumerateArray().ToList();
+        double? Porcentaje(string codigo)
+        {
+            var valor = paneles.First(p => p.GetProperty("codigoPanel").GetString() == codigo).GetProperty("porcentajeCaida");
+            return valor.ValueKind == JsonValueKind.Null ? null : valor.GetDouble();
+        }
+
+        Assert.Equal(28.5, Porcentaje("P03"));
+        Assert.Equal(50.0, Porcentaje("P04"));   // sin porcentaje: la mitad, como siempre
+        Assert.Null(Porcentaje("P05"));        // sobretemperatura: no aplica
+        Assert.Null(Porcentaje("P01"));        // sin falla
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("100")]
+    [InlineData("-5")]
+    [InlineData("abc")]
+    [InlineData("NaN")]
+    [InlineData("")]
+    public async Task Forzar_una_caida_con_porcentaje_fuera_de_rango_o_invalido_responde_400(string porcentaje)
+    {
+        using var fabrica = new SimuladorFactory();
+        using var cliente = fabrica.CrearCliente();
+
+        var respuesta = await cliente.PostAsync($"/simulador/fallas/ARM-001/P02?tipo=caidaPotencia&porcentaje={porcentaje}", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
+    }
+
+    [Fact]
+    public async Task Indicar_porcentaje_con_sobretemperatura_responde_400()
+    {
+        using var fabrica = new SimuladorFactory();
+        using var cliente = fabrica.CrearCliente();
+
+        var respuesta = await cliente.PostAsync("/simulador/fallas/ARM-001/P02?tipo=sobretemperatura&porcentaje=30", null);
+
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
     }
 
     [Fact]
